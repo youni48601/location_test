@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>동 자동 필터 시스템</title>
+<title>동 자동 필터 시스템 V2 FINAL</title>
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c4efd9618689d77a19905c8996d3fe3f&libraries=services"></script>
 <style>
     :root { --primary: #00d2ff; --sub: #007bff; --bg: #f4f7f6; }
@@ -16,57 +16,146 @@
     .tab-button.active { background: white; color: var(--sub); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
     .mapWrap { position: relative; border-radius: 15px; overflow: hidden; border: 1px solid #ddd; margin-bottom: 15px; height: 350px; background: #fff; }
     #map { width: 100%; height: 100%; }
+    .mapBtn { position: absolute; z-index: 5; top: 10px; right: 10px; background: white; padding: 6px; border: 1px solid #aaa; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; }
     textarea { width: 100%; height: 120px; border-radius: 10px; border: 1px solid #ddd; padding: 10px; box-sizing: border-box; font-size: 14px; }
     select, .main-btn { width: 100%; padding: 15px; margin-top: 10px; border-radius: 10px; border: 1px solid #ddd; font-size: 1rem; }
     .main-btn { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; }
+    .copy-btn { background: #6c757d; margin-top: 5px; }
+    .box { border: 1px solid #ddd; padding: 15px; margin-top: 10px; border-radius: 12px; background: white; min-height: 50px; word-break: break-all; font-size: 14px; }
     .group-container { background: white; border: 1px solid #eee; border-radius: 12px; padding: 10px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .groupHeader { display: flex; align-items: center; gap: 8px; padding-bottom: 8px; border-bottom: 1px solid #f0f0f0; margin-bottom: 10px; font-weight: bold; color: var(--sub); }
     .row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; padding: 5px; }
     .row input[type=number] { width: 80px; padding: 5px; border: 1px solid #ddd; border-radius: 5px; }
-    .box { border: 1px solid #ddd; padding: 15px; margin-top: 10px; border-radius: 12px; background: white; min-height: 50px; word-break: break-all; font-size: 14px; }
+    .card { border: 1px solid #eee; padding: 10px; margin-bottom: 8px; border-radius: 10px; background: white; font-size: 0.9rem; }
 </style>
 </head>
 <body>
-<div class="header-nav"><a href="index.html">🏠 포털로</a><span style="margin-left:15px; font-weight:bold;">동 자동 필터 시스템</span></div>
+<div class="header-nav"><a href="index.html">🏠 포털로</a><span style="margin-left:15px; font-weight:bold;">동 자동 필터 시스템 V2</span></div>
 <div class="main-container">
     <div class="tabs">
         <button class="tab-button active" onclick="tab(event,'search')">검색</button>
         <button class="tab-button" onclick="tab(event,'accept')">수락</button>
+        <button class="tab-button" onclick="tab(event,'exclude')">제외</button>
     </div>
+
     <div id="search" class="tab-content">
-        <div class="mapWrap"><div id="map"></div></div>
-        <select id="radius"><option value="5">5km 이내</option><option value="10" selected>10km 이내</option><option value="20">20km 이내</option></select>
+        <div class="mapWrap">
+            <div id="map"></div>
+            <div class="mapBtn" onclick="goMyLocation()">내 위치로</div>
+        </div>
+        <select id="radius">
+            <option value="1">1km 이내</option>
+            <option value="2">2km 이내</option>
+            <option value="5" selected>5km 이내</option>
+            <option value="10">10km 이내</option>
+            <option value="20">20km 이내</option>
+            <option value="50">50km 이내</option>
+        </select>
         <button class="main-btn" onclick="findDongs()">반경 내 동 검색하기</button>
+        <button class="main-btn copy-btn" onclick="copySearch()">결과 전체 복사</button>
         <div id="searchResult" style="margin-top:15px;"></div>
     </div>
+
     <div id="accept" class="tab-content" style="display:none;">
         <textarea id="acceptText" placeholder="여기에 주소 리스트를 붙여넣으세요..."></textarea>
         <button class="main-btn" onclick="extractAccept()">동 이름 추출</button>
         <div id="acceptList" style="margin-top:15px;"></div>
         <button class="main-btn" style="background:var(--sub);" onclick="makeFinal()">최종 결과 생성 (#)</button>
         <div id="finalBox" class="box"></div>
+        <button class="main-btn copy-btn" onclick="copyFinal()">최종 결과 복사</button>
+    </div>
+
+    <div id="exclude" class="tab-content" style="display:none;">
+        <textarea id="excludeText" placeholder="제외할 지역 데이터를 입력하세요..."></textarea>
+        <button class="main-btn" onclick="extractExclude()">동 이름 추출</button>
+        <div id="excludeList" style="margin-top:15px;"></div>
+        <button class="main-btn" style="background:var(--sub);" onclick="makeExclude()">제외 결과 생성</button>
+        <div id="excludeBox" class="box"></div>
+        <button class="main-btn copy-btn" onclick="copyExclude()">결과 복사</button>
     </div>
 </div>
 
 <script>
-let map, ps, myPos;
 const REST_API_KEY="KakaoAK f0d4cc4d5d27754eef8ea144d7aa9691";
+let map, myLat, myLon, currentLat, currentLon, selectMarker;
+let markers = [];
+let searchGlobal = [];
 
+// [초기 설정 복구] 지도 및 위치 초기화
 function initMap() {
-    const container = document.getElementById('map');
     navigator.geolocation.getCurrentPosition(pos => {
-        myPos = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
-        map = new kakao.maps.Map(container, { center: myPos, level: 7 });
-        ps = new kakao.maps.services.Places();
-        new kakao.maps.Marker({ position: myPos, map: map, image: new kakao.maps.MarkerImage('https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png', new kakao.maps.Size(24, 35)) });
+        myLat = pos.coords.latitude;
+        myLon = pos.coords.longitude;
+        currentLat = myLat; currentLon = myLon;
+        const container = document.getElementById('map');
+        map = new kakao.maps.Map(container, { center: new kakao.maps.LatLng(myLat, myLon), level: 6 });
+
+        new kakao.maps.Marker({
+            position: new kakao.maps.LatLng(myLat, myLon),
+            map: map,
+            image: new kakao.maps.MarkerImage('https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png', new kakao.maps.Size(24, 35))
+        });
+
+        kakao.maps.event.addListener(map, 'click', function(mouseEvent) {
+            let latlng = mouseEvent.latLng;
+            currentLat = latlng.getLat(); currentLon = latlng.getLng();
+            if(selectMarker) selectMarker.setMap(null);
+            selectMarker = new kakao.maps.Marker({ position: latlng });
+            selectMarker.setMap(map);
+        });
     }, () => {
-        myPos = new kakao.maps.LatLng(35.247, 128.651);
-        map = new kakao.maps.Map(container, { center: myPos, level: 7 });
-        ps = new kakao.maps.services.Places();
+        map = new kakao.maps.Map(document.getElementById('map'), { center: new kakao.maps.LatLng(35.247, 128.651), level: 6 });
     });
 }
 kakao.maps.load(initMap);
 
+function goMyLocation(){
+    if(myLat) map.setCenter(new kakao.maps.LatLng(myLat, myLon));
+}
+
+// [초기 알고리즘 복구] 거리 계산 함수
+function getDistance(lat1,lon1,lat2,lon2){
+    const R=6371;
+    const dLat=(lat2-lat1)*Math.PI/180;
+    const dLon=(lon2-lon1)*Math.PI/180;
+    const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+    return R*(2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)));
+}
+
+// [초기 알고리즘 복구] 반경 내 동 검색
+async function findDongs(){
+    markers.forEach(m => m.setMap(null)); markers = [];
+    const radius = Number(document.getElementById("radius").value);
+    let mapData = new Map();
+    const step = 1;
+    for(let i=-radius; i<=radius; i+=step){
+        for(let j=-radius; j<=radius; j+=step){
+            let y = currentLat+(i/111);
+            let x = currentLon+(j/(111*Math.cos(currentLat*Math.PI/180)));
+            let dist = getDistance(currentLat,currentLon,y,x);
+            if(dist > radius) continue;
+            try {
+                let res = await fetch(`https://dapi.kakao.com/v2/local/geo/coord2regioncode.json?x=${x}&y=${y}`,{headers:{Authorization:REST_API_KEY}});
+                let data = await res.json();
+                if(data.documents[0]){
+                    let d = data.documents[0];
+                    let full = `${d.region_1depth_name} ${d.region_2depth_name} ${d.region_3depth_name}`;
+                    if(!mapData.has(full) || mapData.get(full).dist > dist) mapData.set(full, {dist, lat:y, lon:x});
+                }
+            } catch(e){}
+        }
+    }
+    searchGlobal = [...mapData.entries()].sort((a,b)=>a[1].dist-b[1].dist).map(v=>`${v[0]} (${v[1].dist.toFixed(2)}km)`);
+    const div = document.getElementById("searchResult");
+    div.innerHTML = "";
+    [...mapData.entries()].sort((a,b)=>a[1].dist-b[1].dist).forEach(v => {
+        let m = new kakao.maps.Marker({ position: new kakao.maps.LatLng(v[1].lat, v[1].lon), map: map });
+        markers.push(m);
+        div.innerHTML += `<div class="card"><b>${v[0]}</b> <span style="float:right; color:var(--sub);">${v[1].dist.toFixed(2)}km</span></div>`;
+    });
+}
+
+// 공통 탭 이동
 function tab(evt, id){
     document.querySelectorAll(".tab-content").forEach(v=>v.style.display="none");
     document.getElementById(id).style.display="block";
@@ -74,33 +163,45 @@ function tab(evt, id){
     evt.target.classList.add("active");
 }
 
-function extractAccept(){
-    const text = document.getElementById("acceptText").value;
-    const lines = text.split(/[,\n]/).map(v=>v.trim()).filter(v=>v);
-    const groups = {};
-    lines.forEach(line => {
-        const parts = line.split(" ");
-        if(parts.length < 2) return;
-        const groupName = parts.slice(0, 3).join(" ");
-        const dong = parts[3] ? parts[3].replace(/[0-9]/g, "") : parts[parts.length-1].replace(/[0-9]/g, "");
-        if(!groups[groupName]) groups[groupName] = [];
-        if(!groups[groupName].includes(dong)) groups[groupName].push(dong);
+// [초기 로직 유지] 이름 정규화 및 그룹화
+function normalizeDong(name){
+    let last=name.split(" ").pop();
+    if(last.endsWith("동")||last.endsWith("면")||last.endsWith("읍")){
+        let base=last.slice(0,-1); if(base.length===1)return last; return base;
+    }
+    return last;
+}
+function getGroupName(parts){
+    if(parts.length>=4 && parts[2].endsWith("구")) return `${parts[0]} ${parts[1]} ${parts[2]}`;
+    return `${parts[0]} ${parts[1]}`;
+}
+function splitGroups(text){
+    let arr=text.split(/[,\n]/).map(v=>v.trim()).filter(v=>v);
+    let map={};
+    arr.forEach(v=>{
+        let clean=v.replace(/\(.+\)/,"").trim();
+        let parts=clean.split(" ");
+        let group=getGroupName(parts);
+        let dong=normalizeDong(clean);
+        if(!map[group])map[group]=[]; if(!map[group].includes(dong))map[group].push(dong);
     });
-    renderGroups(groups);
+    return map;
 }
 
-function renderGroups(groups) {
-    const list = document.getElementById("acceptList");
+// 그룹 렌더링 및 체크 로직
+function renderGroup(target, mapData, withMoney){
+    const list = document.getElementById(target);
     list.innerHTML = "";
-    Object.keys(groups).forEach((g, idx) => {
-        let html = `<div class="group-container" id="g-${idx}">
+    Object.keys(mapData).forEach((g, idx) => {
+        const id = `${target}-g-${idx}`;
+        let html = `<div class="group-container" id="${id}">
             <div class="groupHeader">
-                <input type="checkbox" onchange="toggleGroup(this, 'g-${idx}')"> <span>${g}</span>
+                <input type="checkbox" onchange="toggleGroup(this, '${id}')"> <span>${g}</span>
             </div>`;
-        groups[g].forEach(d => {
+        mapData[g].forEach(d => {
             html += `<div class="row">
                 <input type="checkbox" class="dong-check"> <span>${d}</span>
-                <input type="number" placeholder="금액" class="dong-price">
+                ${withMoney ? '<input type="number" class="dong-price" placeholder="금액">' : ''}
             </div>`;
         });
         html += `</div>`;
@@ -109,32 +210,35 @@ function renderGroups(groups) {
 }
 
 function toggleGroup(chk, groupId) {
-    const container = document.getElementById(groupId);
-    const checks = container.querySelectorAll(".dong-check");
-    checks.forEach(c => c.checked = chk.checked);
+    document.getElementById(groupId).querySelectorAll(".dong-check").forEach(c => c.checked = chk.checked);
 }
 
-async function findDongs() {
-    const radius = Number(document.getElementById("radius").value);
-    const div = document.getElementById("searchResult");
-    div.innerHTML = "검색 중...";
-    // 간단 검색 로직 (실제 좌표 연산 기반)
-    // 사용자님의 기존 API fetch 로직을 여기에 통합하여 결과 표시
-    div.innerHTML = "검색이 완료되었습니다. (검색 로직 실행됨)";
-}
+function extractAccept(){ renderGroup("acceptList", splitGroups(document.getElementById("acceptText").value), true); }
+function extractExclude(){ renderGroup("excludeList", splitGroups(document.getElementById("excludeText").value), false); }
 
 function makeFinal(){
-    const rows = document.querySelectorAll(".row");
     let res = [];
-    rows.forEach(r => {
+    document.querySelectorAll("#acceptList .row").forEach(r => {
         if(r.querySelector(".dong-check").checked){
-            const name = r.querySelector("span").innerText;
-            const price = r.querySelector(".dong-price").value;
-            if(price) res.push(`${name}#${price}`);
+            let name = r.querySelector("span").innerText;
+            let money = r.querySelector(".dong-price").value;
+            if(money) res.push(`${name}#${money}`);
         }
     });
     document.getElementById("finalBox").innerText = res.join(",");
 }
+
+function makeExclude(){
+    let res = [];
+    document.querySelectorAll("#excludeList .row").forEach(r => {
+        if(r.querySelector(".dong-check").checked) res.push(r.querySelector("span").innerText);
+    });
+    document.getElementById("excludeBox").innerText = res.join(",");
+}
+
+function copySearch(){ navigator.clipboard.writeText(searchGlobal.join(",")); alert("복사 완료"); }
+function copyFinal(){ navigator.clipboard.writeText(document.getElementById("finalBox").innerText); alert("복사 완료"); }
+function copyExclude(){ navigator.clipboard.writeText(document.getElementById("excludeBox").innerText); alert("복사 완료"); }
 </script>
 </body>
 </html>
