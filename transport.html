@@ -44,3 +44,100 @@
             <option value="20000">20km 이내</option>
             <option value="30000">30km 이내</option>
         </select>
+        <button onclick="searchHubs()">내 주변 기차역/터미널 검색</button>
+    </div>
+
+    <div id="resultList"></div>
+
+<script>
+let map, ps, myPos;
+let markers = [];
+
+// [핵심수정] 지도를 생성하고 화면에 표시하는 메인 함수
+function initMap() {
+    navigator.geolocation.getCurrentPosition(pos => {
+        myPos = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
+        
+        const container = document.getElementById('map');
+        const options = { center: myPos, level: 7 };
+        
+        // 지도 객체 생성
+        map = new kakao.maps.Map(container, options);
+        ps = new kakao.maps.services.Places();
+        
+        // 내 위치 마커 표시
+        new kakao.maps.Marker({
+            position: myPos, 
+            map: map,
+            image: new kakao.maps.MarkerImage('https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png', new kakao.maps.Size(24, 35))
+        });
+    }, err => {
+        alert("GPS 정보를 사용할 수 없습니다. 브라우저 설정을 확인해주세요.");
+        // GPS 실패 시 기본 위치 (의창구청 인근)
+        myPos = new kakao.maps.LatLng(35.247, 128.651);
+        map = new kakao.maps.Map(document.getElementById('map'), { center: myPos, level: 7 });
+        ps = new kakao.maps.services.Places();
+    });
+}
+
+// 카카오맵 API 로드 후 실행
+kakao.maps.load(initMap);
+
+function searchHubs() {
+    if(!ps) return alert("지도가 로드되는 중입니다. 잠시만 기다려주세요.");
+    
+    const radius = document.getElementById('radius').value;
+    const keywords = ['기차역', '버스터미널'];
+    const exclude = ['화물', '폐역', '물류', '검수', '기지'];
+    
+    document.getElementById('resultList').innerHTML = "";
+    markers.forEach(m => m.setMap(null));
+    markers = [];
+
+    keywords.forEach(kw => {
+        ps.keywordSearch(kw, (data, status) => {
+            if (status === kakao.maps.services.Status.OK) {
+                const filtered = data.filter(p => !exclude.some(word => p.place_name.includes(word)));
+                displayPlaces(filtered);
+            }
+        }, { location: myPos, radius: radius, sort: kakao.maps.services.SortBy.DISTANCE });
+    });
+}
+
+function displayPlaces(places) {
+    const list = document.getElementById('resultList');
+    places.forEach(p => {
+        const isTrain = p.place_name.endsWith('역');
+        const typeTag = isTrain ? '<span class="tag tag-train">기차/KTX</span>' : '<span class="tag tag-bus">고속/시외버스</span>';
+        
+        // 터미널과 역에 따른 링크 최적화
+        let timeLink = isTrain 
+            ? `https://www.letskorail.com/` 
+            : `https://txbus.t-money.co.kr/`;
+
+        if(p.place_name.includes("창원종합버스터미널")) {
+            timeLink = "https://intercitybus.tmoney.co.kr/"; 
+        }
+
+        // 마커 찍기
+        const marker = new kakao.maps.Marker({ position: new kakao.maps.LatLng(p.y, p.x), map: map });
+        markers.push(marker);
+
+        list.innerHTML += `
+            <div class="result-card">
+                <div class="info">
+                    ${typeTag}
+                    <h4>${p.place_name}</h4>
+                    <p>${p.road_address_name || p.address_name}</p>
+                    <p style="color:var(--sub); font-weight:bold;">📍 약 ${p.distance}m</p>
+                </div>
+                <div class="btn-group">
+                    <a href="${timeLink}" target="_blank" class="action-btn btn-time">실시간 시간표/예매</a>
+                    <a href="${p.place_url}" target="_blank" class="action-btn btn-map">카카오 상세정보</a>
+                </div>
+            </div>`;
+    });
+}
+</script>
+</body>
+</html>
