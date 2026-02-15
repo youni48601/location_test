@@ -4,125 +4,172 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>동 자동 필터 시스템 V2 FINAL</title>
-<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c4efd9618689d77a19905c8996d3fe3f"></script>
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c4efd9618689d77a19905c8996d3fe3f&libraries=services"></script>
 <style>
-    body{font-family:Arial;padding:15px;margin:0; background: #fff;}
-    .nav-back { margin-bottom: 10px; }
-    .nav-back a { text-decoration: none; color: #00d2ff; font-weight: bold; font-size: 0.9rem; }
-    .tabs{display:flex;margin-bottom:15px;}
-    .tab-button{flex:1;padding:10px;border:1px solid #ccc;background:#f0f0f0;cursor:pointer;}
-    .tab-button.active{background:#ddd;font-weight:bold;}
-    textarea{width:100%;height:120px;}
-    button{width:100%;padding:10px;margin-top:8px; cursor: pointer;}
-    .row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
-    .row input[type=number]{width:80px;}
-    .box{border:1px solid #ccc;padding:10px;margin-top:10px;border-radius:6px;}
-    .card{border:1px solid #ccc;padding:8px;margin-bottom:6px;border-radius:6px;}
-    .smallBtns{display:flex;gap:6px;margin-top:10px;}
-    .smallBtns button{width:50%;padding:6px;}
-    .groupHeader{display:flex;align-items:center;gap:6px;margin-top:10px;font-weight:bold;}
-    .map{width:100%;height:320px;margin-bottom:10px;border:1px solid #ccc;}
-    .mapBtn{position:absolute;z-index:5;top:10px;right:10px;background:white;padding:6px;border:1px solid #aaa;cursor:pointer;}
-    .mapWrap{position:relative;}
+    :root { --primary: #00d2ff; --sub: #007bff; --bg: #f4f7f6; }
+    body { font-family: 'Pretendard', sans-serif; padding: 0; margin: 0; background: var(--bg); color: #333; }
+    
+    /* 상단 내비게이션 바 - transport.html 스타일과 통일 */
+    .header-nav { 
+        background: #fff; padding: 15px; display: flex; align-items: center; 
+        border-bottom: 1px solid #ddd; position: sticky; top:0; z-index:100; 
+    }
+    .header-nav a { 
+        text-decoration: none; color: var(--sub); font-weight: bold; 
+        border: 1px solid var(--sub); padding: 4px 10px; border-radius: 5px; 
+    }
+
+    .main-container { padding: 15px; }
+
+    /* 탭 스타일 개선 */
+    .tabs { display: flex; margin-bottom: 15px; background: #eee; border-radius: 10px; padding: 5px; }
+    .tab-button { 
+        flex: 1; padding: 12px; border: none; background: none; 
+        cursor: pointer; border-radius: 8px; transition: 0.3s; font-weight: bold; color: #666;
+    }
+    .tab-button.active { background: white; color: var(--sub); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+
+    /* 지도 영역 */
+    .mapWrap { position: relative; border-radius: 15px; overflow: hidden; border: 1px solid #ddd; margin-bottom: 15px; }
+    .map { width: 100%; height: 350px; }
+    .mapBtn { 
+        position: absolute; z-index: 5; top: 10px; right: 10px; 
+        background: white; padding: 8px 12px; border: 1px solid #aaa; 
+        border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: bold;
+    }
+
+    /* 입력 및 버튼 스타일 */
+    textarea { width: 100%; height: 120px; border-radius: 10px; border: 1px solid #ddd; padding: 10px; box-sizing: border-box; }
+    select, .main-btn { 
+        width: 100%; padding: 15px; margin-top: 10px; border-radius: 10px; 
+        border: 1px solid #ddd; font-size: 1rem; 
+    }
+    .main-btn { 
+        background: var(--primary); color: white; border: none; 
+        font-weight: bold; cursor: pointer; transition: 0.2s; 
+    }
+    .main-btn:active { transform: scale(0.98); background: var(--sub); }
+    .copy-btn { background: #6c757d; margin-top: 5px; }
+
+    /* 결과 카드 스타일 */
+    .box { border: 1px solid #ddd; padding: 15px; margin-top: 10px; border-radius: 12px; background: white; min-height: 50px; word-break: break-all; }
+    .card { border: 1px solid #eee; padding: 10px; margin-bottom: 8px; border-radius: 10px; background: white; font-size: 0.9rem; }
+    .row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; background: white; padding: 8px; border-radius: 8px; border: 1px solid #f0f0f0; }
+    .row input[type=number] { width: 70px; padding: 5px; border-radius: 5px; border: 1px solid #ddd; }
+    
+    .smallBtns { display: flex; gap: 8px; margin-top: 10px; }
+    .smallBtns button { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ddd; background: #fff; cursor: pointer; }
+    .groupHeader { display: flex; align-items: center; gap: 8px; margin-top: 15px; font-weight: bold; color: var(--sub); }
 </style>
 </head>
 <body>
 
-<div class="header-nav"><a href="index.html">← 포털</a> <span style="margin-left:15px; font-weight:bold;">📍 동 자동 필터 시스템 V2 FINAL</span></div>
-
-<div class="tabs">
-    <div class="tab-button active" onclick="tab(event,'search')">검색</div>
-    <div class="tab-button" onclick="tab(event,'accept')">수락</div>
-    <div class="tab-button" onclick="tab(event,'exclude')">제외</div>
+<div class="header-nav">
+    <a href="index.html">🏠 포털로</a> 
+    <span style="margin-left:15px; font-weight:bold;">동 자동 필터 시스템</span>
 </div>
 
-<div id="search" class="tab-content">
-    <div class="mapWrap">
-        <div id="map" class="map"></div>
-        <div class="mapBtn" onclick="goMyLocation()">내 위치로</div>
+<div class="main-container">
+    <div class="tabs">
+        <div class="tab-button active" onclick="tab(event,'search')">검색</div>
+        <div class="tab-button" onclick="tab(event,'accept')">수락</div>
+        <div class="tab-button" onclick="tab(event,'exclude')">제외</div>
     </div>
-    <label>검색 반경</label>
-    <select id="radius">
-        <option value="1">1km</option>
-        <option value="2">2km</option>
-        <option value="5" selected>5km</option>
-        <option value="10">10km</option>
-        <option value="20">20km</option>
-        <option value="50">50km</option>
-    </select>
-    <button onclick="findDongs()">검색하기</button>
-    <button onclick="copySearch()">검색결과 복사</button>
-    <div id="searchResult"></div>
-</div>
 
-<div id="accept" class="tab-content" style="display:none;">
-    <textarea id="acceptText"></textarea>
-    <button onclick="extractAccept()">동 이름 추출</button>
-    <div id="acceptList"></div>
-    <div class="smallBtns">
-        <button onclick="checkAll('acceptList',true)">전체 선택</button>
-        <button onclick="checkAll('acceptList',false)">전체 해제</button>
+    <div id="search" class="tab-content">
+        <div class="mapWrap">
+            <div id="map" class="map"></div>
+            <div class="mapBtn" onclick="goMyLocation()">내 위치로</div>
+        </div>
+        <label style="font-size: 0.85rem; color: #666;">검색 반경 설정</label>
+        <select id="radius">
+            <option value="1">1km 이내</option>
+            <option value="2">2km 이내</option>
+            <option value="5" selected>5km 이내</option>
+            <option value="10">10km 이내</option>
+            <option value="20">20km 이내</option>
+            <option value="50">50km 이내</option>
+        </select>
+        <button class="main-btn" onclick="findDongs()">반경 내 동 검색하기</button>
+        <button class="main-btn copy-btn" onclick="copySearch()">결과 전체 복사</button>
+        <div id="searchResult" style="margin-top:15px;"></div>
     </div>
-    <button onclick="makeFinal()">최종 결과 생성</button>
-    <div id="finalBox" class="box"></div>
-    <button onclick="copyFinal()">최종 결과 복사</button>
-</div>
 
-<div id="exclude" class="tab-content" style="display:none;">
-    <textarea id="excludeText"></textarea>
-    <button onclick="extractExclude()">동 이름 추출</button>
-    <div id="excludeList"></div>
-    <div class="smallBtns">
-        <button onclick="checkAll('excludeList',true)">전체 선택</button>
-        <button onclick="checkAll('excludeList',false)">전체 해제</button>
+    <div id="accept" class="tab-content" style="display:none;">
+        <textarea id="acceptText" placeholder="여기에 주소 데이터를 붙여넣으세요..."></textarea>
+        <button class="main-btn" onclick="extractAccept()">동 이름 추출</button>
+        <div id="acceptList"></div>
+        <div class="smallBtns">
+            <button onclick="checkAll('acceptList',true)">전체 선택</button>
+            <button onclick="checkAll('acceptList',false)">전체 해제</button>
+        </div>
+        <button class="main-btn" style="background:var(--sub);" onclick="makeFinal()">최종 결과 생성 (#)</button>
+        <div id="finalBox" class="box"></div>
+        <button class="main-btn copy-btn" onclick="copyFinal()">최종 결과 복사</button>
     </div>
-    <button onclick="makeExclude()">제외 결과 생성</button>
-    <div id="excludeBox" class="box"></div>
-    <button onclick="copyExclude()">결과 복사</button>
+
+    <div id="exclude" class="tab-content" style="display:none;">
+        <textarea id="excludeText" placeholder="제외할 지역 데이터를 입력하세요..."></textarea>
+        <button class="main-btn" onclick="extractExclude()">동 이름 추출</button>
+        <div id="excludeList"></div>
+        <div class="smallBtns">
+            <button onclick="checkAll('excludeList',true)">전체 선택</button>
+            <button onclick="checkAll('excludeList',false)">전체 해제</button>
+        </div>
+        <button class="main-btn" style="background:var(--sub);" onclick="makeExclude()">제외 결과 생성</button>
+        <div id="excludeBox" class="box"></div>
+        <button class="main-btn copy-btn" onclick="copyExclude()">결과 복사</button>
+    </div>
 </div>
 
 <script>
-/* 사용자님 로직 그대로 유지 */
+/* 로직은 사용자님의 원본을 유지하며 지도 초기화 부분만 보강했습니다. */
 const REST_API_KEY="KakaoAK f0d4cc4d5d27754eef8ea144d7aa9691";
-let map;
-let myLat,myLon,currentLat,currentLon;
-let myMarker,selectMarker;
-let markers=[];
-let searchGlobal=[];
+let map, ps;
+let myLat, myLon, currentLat, currentLon;
+let myMarker, selectMarker;
+let markers = [];
+let searchGlobal = [];
 
-// 지도 초기화
-const container = document.getElementById('map');
-const options = { center: new kakao.maps.LatLng(35.5384, 129.3114), level: 6 };
-map = new kakao.maps.Map(container, options);
+function initMap() {
+    navigator.geolocation.getCurrentPosition(pos => {
+        myLat = pos.coords.latitude;
+        myLon = pos.coords.longitude;
+        currentLat = myLat; currentLon = myLon;
+        
+        const container = document.getElementById('map');
+        const options = { center: new kakao.maps.LatLng(myLat, myLon), level: 6 };
+        map = new kakao.maps.Map(container, options);
 
-navigator.geolocation.getCurrentPosition(pos=>{
-    myLat=pos.coords.latitude;
-    myLon=pos.coords.longitude;
-    currentLat=myLat;
-    currentLon=myLon;
-    let posi=new kakao.maps.LatLng(myLat,myLon);
-    myMarker=new kakao.maps.Marker({
-        position:posi,
-        image:new kakao.maps.MarkerImage('https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png', new kakao.maps.Size(24,35))
+        myMarker = new kakao.maps.Marker({
+            position: new kakao.maps.LatLng(myLat, myLon),
+            map: map,
+            image: new kakao.maps.MarkerImage('https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png', new kakao.maps.Size(24, 35))
+        });
+
+        kakao.maps.event.addListener(map, 'click', function(mouseEvent) {
+            let latlng = mouseEvent.latLng;
+            currentLat = latlng.getLat(); currentLon = latlng.getLng();
+            if(selectMarker) selectMarker.setMap(null);
+            selectMarker = new kakao.maps.Marker({ position: latlng });
+            selectMarker.setMap(map);
+        });
+    }, err => {
+        // GPS 실패 시 기본 좌표 (창원)
+        map = new kakao.maps.Map(document.getElementById('map'), { center: new kakao.maps.LatLng(35.247, 128.651), level: 6 });
     });
-    myMarker.setMap(map);
-    map.setCenter(posi);
-});
-
-kakao.maps.event.addListener(map,'click',function(mouseEvent){
-    let latlng=mouseEvent.latLng;
-    currentLat=latlng.getLat(); currentLon=latlng.getLng();
-    if(selectMarker)selectMarker.setMap(null);
-    selectMarker=new kakao.maps.Marker({position:latlng});
-    selectMarker.setMap(map);
-});
-
-function goMyLocation(){
-    currentLat=myLat; currentLon=myLon;
-    map.setCenter(new kakao.maps.LatLng(myLat,myLon));
 }
 
-function tab(evt,id){
+kakao.maps.load(initMap);
+
+function goMyLocation(){
+    if(myLat && myLon) {
+        currentLat = myLat; currentLon = myLon;
+        map.setCenter(new kakao.maps.LatLng(myLat, myLon));
+    }
+}
+
+function tab(evt, id){
     document.querySelectorAll(".tab-content").forEach(v=>v.style.display="none");
     document.getElementById(id).style.display="block";
     document.querySelectorAll(".tab-button").forEach(b=>b.classList.remove("active"));
@@ -171,11 +218,12 @@ async function findDongs(){
         let marker=new kakao.maps.Marker({position:pos});
         marker.setMap(map);
         markers.push(marker);
-        div.innerHTML+=`<div class="card">${v[0]} (${v[1].dist.toFixed(2)}km)</div>`;
+        div.innerHTML+=`<div class="card"><b>${v[0]}</b> <span style="color:var(--sub); float:right;">${v[1].dist.toFixed(2)}km</span></div>`;
     });
 }
 
 function copySearch(){ navigator.clipboard.writeText(searchGlobal.join(",")); alert("복사 완료"); }
+
 function normalizeDong(name){
     let last=name.split(" ").pop();
     if(last.endsWith("동")||last.endsWith("면")||last.endsWith("읍")){
@@ -183,6 +231,7 @@ function normalizeDong(name){
     }
     return last;
 }
+
 function getGroupName(parts){
     if(parts.length>=4){
         if(parts[2].endsWith("구")) return `${parts[0]} ${parts[1]} ${parts[2]}`;
@@ -194,6 +243,7 @@ function getGroupName(parts){
     }
     return parts.join(" ");
 }
+
 function splitGroups(text){
     let arr=text.split(",").map(v=>v.trim()).filter(v=>v);
     let map={};
@@ -206,11 +256,14 @@ function splitGroups(text){
     });
     return map;
 }
+
 function checkAll(id,state){ document.querySelectorAll(`#${id} input[type=checkbox]`).forEach(c=>c.checked=state); }
+
 function toggleGroup(header){
     let group=header.parentElement.parentElement;
     group.querySelectorAll(".row input[type=checkbox]").forEach(c=>c.checked=header.checked);
 }
+
 function renderGroup(target,mapData,withMoney){
     let div=document.getElementById(target);
     div.innerHTML="";
@@ -221,8 +274,10 @@ function renderGroup(target,mapData,withMoney){
         });
     });
 }
+
 function extractAccept(){ renderGroup("acceptList",splitGroups(document.getElementById("acceptText").value),true); }
 function extractExclude(){ renderGroup("excludeList",splitGroups(document.getElementById("excludeText").value),false); }
+
 function makeFinal(){
     let rows=document.querySelectorAll("#acceptList .row");
     let out=[];
@@ -235,17 +290,17 @@ function makeFinal(){
     });
     document.getElementById("finalBox").innerText=out.join(",");
 }
+
 function copyFinal(){ navigator.clipboard.writeText(document.getElementById("finalBox").innerText); alert("복사 완료"); }
+
 function makeExclude(){
     let rows=document.querySelectorAll("#excludeList .row");
     let out=[];
     rows.forEach(r=>{ if(r.querySelector("input").checked) out.push(r.querySelector("span").innerText); });
     document.getElementById("excludeBox").innerText=out.join(",");
 }
+
 function copyExclude(){ navigator.clipboard.writeText(document.getElementById("excludeBox").innerText); alert("복사 완료"); }
 </script>
 </body>
-
 </html>
-
-
