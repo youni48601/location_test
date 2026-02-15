@@ -6,45 +6,48 @@
 <title>스마트 교통 허브 포털</title>
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c4efd9618689d77a19905c8996d3fe3f&libraries=services"></script>
 <style>
-    :root { --primary: #00d2ff; --sub: #007bff; --accent: #ff9f43; }
+    :root { --primary: #00d2ff; --sub: #007bff; --accent: #ff9f43; --green: #2ecc71; }
     body { font-family: 'Pretendard', sans-serif; padding: 0; margin: 0; background: #f4f7f6; color: #333; }
     .header-nav { background: #fff; padding: 15px; display: flex; align-items: center; border-bottom: 1px solid #ddd; position: sticky; top:0; z-index:100; }
     .header-nav a { text-decoration: none; color: var(--sub); font-weight: bold; border: 1px solid var(--sub); padding: 4px 10px; border-radius: 5px; }
-    .map-container { width: 100%; height: 350px; position: relative; border-bottom: 2px solid var(--primary); }
+    .map-container { width: 100%; height: 300px; position: relative; border-bottom: 2px solid var(--primary); }
     #map { width: 100%; height: 100%; }
     .controls { padding: 20px; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
     select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 1rem; margin-bottom: 10px; }
-    button { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 10px; font-weight: bold; font-size: 1.1rem; cursor: pointer; }
+    button.search-btn { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 10px; font-weight: bold; font-size: 1.1rem; cursor: pointer; }
+    
     #resultList { padding: 15px; }
     .result-card { background: white; padding: 18px; border-radius: 15px; margin-bottom: 12px; border: 1px solid #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
     .tag { display: inline-block; padding: 3px 8px; border-radius: 5px; font-size: 0.7rem; font-weight: bold; margin-bottom: 5px; color: white; }
     .tag-train { background: #333; }
     .tag-bus { background: var(--accent); }
+    
     .info h4 { margin: 5px 0; color: #222; font-size: 1.1rem; }
     .info p { margin: 2px 0; font-size: 0.85rem; color: #777; }
-    .btn-group { display: flex; gap: 8px; margin-top: 12px; }
-    .action-btn { flex: 1; text-align: center; padding: 10px; border-radius: 8px; font-size: 0.85rem; font-weight: bold; text-decoration: none; border: 1px solid #ddd; }
-    .btn-time { background: #eef9ff; color: var(--sub); border-color: #b3e5ff; }
+    
+    /* 버튼 그룹 레이아웃 수정 */
+    .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+    .action-btn { text-align: center; padding: 10px; border-radius: 8px; font-size: 0.8rem; font-weight: bold; text-decoration: none; border: 1px solid #ddd; transition: 0.2s; }
+    .btn-schedule { background: #fff4e6; color: #d35400; border-color: #ffd8a8; } /* 시간표 */
+    .btn-reserve { background: #eafaf1; color: #27ae60; border-color: #abebc6; }  /* 예매 */
+    .btn-full { grid-column: span 2; background: #f8f9fa; color: #666; font-size: 0.75rem; } /* 상세정보 */
 </style>
 </head>
 <body>
     <div class="header-nav">
         <a href="index.html">🏠 포털로</a> 
-        <span style="margin-left:15px; font-weight:bold;">스마트 교통 허브 검색</span>
+        <span style="margin-left:15px; font-weight:bold;">교통 허브 실시간 정보</span>
     </div>
     
-    <div class="map-container">
-        <div id="map"></div>
-    </div>
+    <div id="map" class="map-container"></div>
 
     <div class="controls">
         <select id="radius">
             <option value="5000">5km 이내</option>
             <option value="10000" selected>10km 이내</option>
             <option value="20000">20km 이내</option>
-            <option value="30000">30km 이내</option>
         </select>
-        <button onclick="searchHubs()">내 주변 기차역/터미널 검색</button>
+        <button class="search-btn" onclick="searchHubs()">내 주변 기차역/터미널 검색</button>
     </div>
 
     <div id="resultList"></div>
@@ -53,46 +56,28 @@
 let map, ps, myPos;
 let markers = [];
 
-// [핵심수정] 지도를 생성하고 화면에 표시하는 메인 함수
 function initMap() {
     navigator.geolocation.getCurrentPosition(pos => {
         myPos = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
-        
-        const container = document.getElementById('map');
-        const options = { center: myPos, level: 7 };
-        
-        // 지도 객체 생성
-        map = new kakao.maps.Map(container, options);
-        ps = new kakao.maps.services.Places();
-        
-        // 내 위치 마커 표시
-        new kakao.maps.Marker({
-            position: myPos, 
-            map: map,
-            image: new kakao.maps.MarkerImage('https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png', new kakao.maps.Size(24, 35))
-        });
-    }, err => {
-        alert("GPS 정보를 사용할 수 없습니다. 브라우저 설정을 확인해주세요.");
-        // GPS 실패 시 기본 위치 (의창구청 인근)
-        myPos = new kakao.maps.LatLng(35.247, 128.651);
         map = new kakao.maps.Map(document.getElementById('map'), { center: myPos, level: 7 });
         ps = new kakao.maps.services.Places();
+        
+        new kakao.maps.Marker({
+            position: myPos, map: map,
+            image: new kakao.maps.MarkerImage('https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png', new kakao.maps.Size(24, 35))
+        });
     });
 }
 
-// 카카오맵 API 로드 후 실행
 kakao.maps.load(initMap);
 
 function searchHubs() {
-    if(!ps) return alert("지도가 로드되는 중입니다. 잠시만 기다려주세요.");
-    
     const radius = document.getElementById('radius').value;
     const keywords = ['기차역', '버스터미널'];
     const exclude = ['화물', '폐역', '물류', '검수', '기지'];
     
     document.getElementById('resultList').innerHTML = "";
-    markers.forEach(m => m.setMap(null));
-    markers = [];
+    markers.forEach(m => m.setMap(null)); markers = [];
 
     keywords.forEach(kw => {
         ps.keywordSearch(kw, (data, status) => {
@@ -110,16 +95,17 @@ function displayPlaces(places) {
         const isTrain = p.place_name.endsWith('역');
         const typeTag = isTrain ? '<span class="tag tag-train">기차/KTX</span>' : '<span class="tag tag-bus">고속/시외버스</span>';
         
-        // 터미널과 역에 따른 링크 최적화
-        let timeLink = isTrain 
-            ? `https://www.letskorail.com/` 
-            : `https://txbus.t-money.co.kr/`;
+        // 1. 실시간 시간표 페이지 (카카오맵의 대중교통 탭 활용 - 가장 정확)
+        const scheduleLink = `https://map.kakao.com/link/to/${p.id}`; 
+        
+        // 2. 공식 예매 페이지 분기
+        let reserveLink = isTrain 
+            ? `https://www.letskorail.com/ebizprd/EbizPrdTicketpr21111_i1.do` 
+            : `https://txbus.t-money.co.kr/main.do`;
 
-        if(p.place_name.includes("창원종합버스터미널")) {
-            timeLink = "https://intercitybus.tmoney.co.kr/"; 
-        }
+        // 창원 터미널 예외 처리
+        if(p.place_name.includes("창원종합버스터미널")) reserveLink = "https://intercitybus.tmoney.co.kr/";
 
-        // 마커 찍기
         const marker = new kakao.maps.Marker({ position: new kakao.maps.LatLng(p.y, p.x), map: map });
         markers.push(marker);
 
@@ -129,11 +115,12 @@ function displayPlaces(places) {
                     ${typeTag}
                     <h4>${p.place_name}</h4>
                     <p>${p.road_address_name || p.address_name}</p>
-                    <p style="color:var(--sub); font-weight:bold;">📍 약 ${p.distance}m</p>
+                    <p style="color:var(--sub); font-weight:bold;">📍 거리: 약 ${p.distance}m</p>
                 </div>
                 <div class="btn-group">
-                    <a href="${timeLink}" target="_blank" class="action-btn btn-time">실시간 시간표/예매</a>
-                    <a href="${p.place_url}" target="_blank" class="action-btn btn-map">카카오 상세정보</a>
+                    <a href="${scheduleLink}" target="_blank" class="action-btn btn-schedule">📅 실시간 시간표</a>
+                    <a href="${reserveLink}" target="_blank" class="action-btn btn-reserve">🎫 즉시 예매</a>
+                    <a href="${p.place_url}" target="_blank" class="action-btn btn-full">상세정보 보기</a>
                 </div>
             </div>`;
     });
