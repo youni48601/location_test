@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infra Portal</title>
+<style>
+    :root { --bg: #f0f2f5; --primary: #00d2ff; --dark: #1a1a1a; }
+    body { font-family: 'Pretendard', sans-serif; background: var(--bg); margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+    .header { background: var(--dark); color: white; width: 100%; padding: 20px 0; text-align: center; margin-bottom: 40px; }
+    .container { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; width: 90%; max-width: 1000px; }
+    .nav-card { background: white; border-radius: 15px; padding: 30px; text-decoration: none; color: var(--dark); box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.3s; display: flex; flex-direction: column; align-items: center; border: 1px solid #eee; }
+    .nav-card:hover { transform: translateY(-10px); border-color: var(--primary); }
+    .icon { font-size: 3rem; margin-bottom: 15px; }
+    .nav-card h2 { margin: 0 0 10px 0; color: #333; }
+    .nav-card p { margin: 0; color: #666; font-size: 0.9rem; text-align: center; }
+    .admin-link { margin-top: 40px; color: #999; text-decoration: none; font-size: 0.8rem; border: 1px solid #ccc; padding: 5px 15px; border-radius: 20px; }
+</style>
+</head>
+<body>
+    <div class="header"><h1>MY INFRA PORTAL</h1></div>
+    <div class="container">
+        <a href="dong-filter.html" class="nav-card">
+            <div class="icon">📍</div>
+            <h2>동 자동 필터</h2>
+            <p>반경 내 행정동 추출 및 그룹화 도구</p>
+        </a>
+        <a href="transport.html" class="nav-card">
+            <div class="icon">🚉</div>
+            <h2>전국 교통 허브 찾기</h2>
+            <p>내 위치 주변 터미널 및 기차역 검색</p>
+        </a>
+        <a href="#" class="nav-card" style="opacity: 0.5;">
+            <div class="icon">➕</div>
+            <h2>추후 추가 예정</h2>
+            <p>세 번째 페이지가 들어갈 자리입니다.</p>
+        </a>
+    </div>
+    <a href="/admin-gate" class="admin-link">🔒 Admin Panel</a>
+</body>
+</html>
